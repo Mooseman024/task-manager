@@ -1,6 +1,7 @@
 import pytest
-from services.tasks import process_order, get_task, create_task
-from utils.errors import ValidationError
+from app import app
+from services.tasks import process_order, get_task, create_task, update_task
+from utils.errors import NotFoundError, ValidationError
 
 def test_process_order_valid():
     result = process_order(1)
@@ -41,3 +42,58 @@ def test_create_task_invalid_priority_bool():
         create_task("Bad task", 1, priority=True)
     with pytest.raises(ValidationError):
         create_task("Bad task", 1, priority=False)
+
+def test_update_task_valid_priority():
+    created = create_task("Task to update", 1, priority=3)
+    result = update_task(created["id"], {"priority": 5})
+    assert result["priority"] == 5
+
+def test_update_task_unknown_id():
+    with pytest.raises(NotFoundError):
+        update_task(999, {"priority": 2})
+
+def test_update_task_invalid_priority():
+    created = create_task("Task to update", 1, priority=3)
+    with pytest.raises(ValidationError):
+        update_task(created["id"], {"priority": 0})
+    with pytest.raises(ValidationError):
+        update_task(created["id"], {"priority": "high"})
+    with pytest.raises(ValidationError):
+        update_task(created["id"], {"priority": True})
+
+def test_update_task_missing_priority():
+    created = create_task("Task to update", 1, priority=3)
+    with pytest.raises(ValidationError):
+        update_task(created["id"], {})
+
+def test_update_task_unknown_field():
+    created = create_task("Task to update", 1, priority=3)
+    with pytest.raises(ValidationError):
+        update_task(created["id"], {"title": "new title"})
+    with pytest.raises(ValidationError):
+        update_task(created["id"], {"priority": 2, "extra": 1})
+
+@pytest.fixture
+def client():
+    app.config["TESTING"] = True
+    return app.test_client()
+
+def test_patch_route_valid(client):
+    created = create_task("Route task", 1, priority=3)
+    response = client.patch(f"/api/tasks/{created['id']}", json={"priority": 4})
+    assert response.status_code == 200
+    assert response.get_json()["priority"] == 4
+
+def test_patch_route_unknown_field(client):
+    created = create_task("Route task", 1, priority=3)
+    response = client.patch(f"/api/tasks/{created['id']}", json={"title": "x"})
+    assert response.status_code == 422
+
+def test_patch_route_missing_priority(client):
+    created = create_task("Route task", 1, priority=3)
+    response = client.patch(f"/api/tasks/{created['id']}", json={})
+    assert response.status_code == 422
+
+def test_patch_route_unknown_task(client):
+    response = client.patch("/api/tasks/999", json={"priority": 2})
+    assert response.status_code == 404
