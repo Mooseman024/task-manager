@@ -1,7 +1,15 @@
+import copy
 import pytest
 from app import app
-from services.tasks import process_order, get_task, create_task, update_task, list_tasks
+from services.tasks import TASKS, process_order, get_task, create_task, update_task, list_tasks
 from utils.errors import NotFoundError, ValidationError
+
+@pytest.fixture(autouse=True)
+def _reset_tasks():
+    original = copy.deepcopy(TASKS)
+    yield
+    TASKS.clear()
+    TASKS.update(original)
 
 def test_process_order_valid():
     result = process_order(1)
@@ -126,3 +134,27 @@ def test_patch_route_unknown_task(client):
 def test_list_tasks_route_invalid_priority(client):
     response = client.get("/api/tasks?priority=abc")
     assert response.status_code == 422
+
+def test_create_task_route_invalid_priority(client):
+    response = client.post("/api/tasks", json={"title": "Bad", "user_id": 1, "priority": 0})
+    assert response.status_code == 422
+
+def test_patch_route_no_body(client):
+    response = client.patch("/api/tasks/1")
+    assert 400 <= response.status_code < 500
+
+def test_list_tasks_route_filter_matches_priority(client):
+    created = create_task("Route filter task", 1, priority=2)
+    response = client.get("/api/tasks?priority=2")
+    assert response.status_code == 200
+    body = response.get_json()
+    assert created["id"] in [t["id"] for t in body]
+    assert all(t["priority"] == 2 for t in body)
+
+def test_list_tasks_route_filter_different_priority(client):
+    created = create_task("Route filter task 2", 1, priority=4)
+    response = client.get("/api/tasks?priority=4")
+    assert response.status_code == 200
+    body = response.get_json()
+    assert created["id"] in [t["id"] for t in body]
+    assert all(t["priority"] == 4 for t in body)
