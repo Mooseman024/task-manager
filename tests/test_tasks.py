@@ -1,6 +1,6 @@
 import pytest
 from app import app
-from services.tasks import process_order, get_task, create_task, update_task
+from services.tasks import process_order, get_task, create_task, update_task, list_tasks
 from utils.errors import NotFoundError, ValidationError
 
 def test_process_order_valid():
@@ -73,6 +73,31 @@ def test_update_task_unknown_field():
     with pytest.raises(ValidationError):
         update_task(created["id"], {"priority": 2, "extra": 1})
 
+def test_list_tasks_no_filter():
+    created = create_task("List task", 1, priority=2)
+    result = list_tasks()
+    assert created["id"] in [t["id"] for t in result]
+
+def test_list_tasks_filter_matches_priority():
+    created = create_task("Filtered task", 1, priority=2)
+    result = list_tasks("2")
+    assert created["id"] in [t["id"] for t in result]
+    assert all(t["priority"] == 2 for t in result)
+
+def test_list_tasks_filter_different_priority():
+    created = create_task("Other filtered task", 1, priority=4)
+    result = list_tasks("4")
+    assert created["id"] in [t["id"] for t in result]
+    assert all(t["priority"] == 4 for t in result)
+
+def test_list_tasks_invalid_filter():
+    with pytest.raises(ValidationError):
+        list_tasks("abc")
+    with pytest.raises(ValidationError):
+        list_tasks("0")
+    with pytest.raises(ValidationError):
+        list_tasks("6")
+
 @pytest.fixture
 def client():
     app.config["TESTING"] = True
@@ -97,3 +122,7 @@ def test_patch_route_missing_priority(client):
 def test_patch_route_unknown_task(client):
     response = client.patch("/api/tasks/999", json={"priority": 2})
     assert response.status_code == 404
+
+def test_list_tasks_route_invalid_priority(client):
+    response = client.get("/api/tasks?priority=abc")
+    assert response.status_code == 422

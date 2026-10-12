@@ -29,6 +29,28 @@ def _validate_priority(priority: int) -> None:
     if isinstance(priority, bool) or not isinstance(priority, int) or not (1 <= priority <= 5):
         raise ValidationError("priority", "must be an integer between 1 and 5")
 
+def list_tasks(priority: str | None = None) -> list[dict]:
+    """List all tasks, optionally filtered by priority.
+
+    Args:
+        priority: If given, the raw priority filter value (expected to be an
+            integer 1-5 as a string). None means no filtering.
+
+    Returns:
+        A list of matching task records.
+
+    Raises:
+        ValidationError: If priority is given and is not an integer between 1 and 5.
+    """
+    if priority is None:
+        return list(TASKS.values())
+    try:
+        priority_int = int(priority)
+    except ValueError:
+        raise ValidationError("priority", "must be an integer between 1 and 5")
+    _validate_priority(priority_int)
+    return [t for t in TASKS.values() if t["priority"] == priority_int]
+
 def create_task(title: str, user_id: int, priority: int = 3) -> dict:
     """Create a new task.
 
