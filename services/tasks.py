@@ -5,7 +5,10 @@ TASKS: dict[int, dict] = {
 }
 
 def process_order(task_id: int) -> dict:
-    task = TASKS[task_id]
+    try:
+        task = TASKS[task_id]
+    except KeyError:
+        raise ValueError(f"Task {task_id} does not exist")
     task["done"] = True
     return task
 
