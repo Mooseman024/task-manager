@@ -33,7 +33,8 @@ missing record or bad input, and pytest -q passes.
 - No blanket try/except. Check the condition explicitly, the way get_user does.
 
 ## Verification
-- Run pytest -q after every function you change, not once at the end. It must pass before
-  you move to the next function. If it fails, fix or revert that function first.
+- One function per edit. Never change two functions in the same Edit/Update call.
+- After each single-function edit, run pytest -q and show its result before starting the
+  next function. If it fails, fix or revert that function first.
 - Finish with a table: function | before | after (or "skipped: already compliant"), then the
   final pytest -q line.

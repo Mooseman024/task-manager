@@ -7,14 +7,37 @@ TASKS: dict[int, dict] = {
 }
 
 def process_order(task_id: int) -> dict:
-    try:
-        task = TASKS[task_id]
-    except KeyError:
-        raise ValueError(f"Task {task_id} does not exist")
+    """Mark a task as done.
+
+    Args:
+        task_id: The ID of the task to mark as done.
+
+    Returns:
+        The updated task record.
+
+    Raises:
+        NotFoundError: If no task exists with the given ID.
+    """
+    if task_id not in TASKS:
+        raise NotFoundError("Task")
+    task = TASKS[task_id]
     task["done"] = True
     return task
 
 def get_task(task_id: int) -> dict:
+    """Retrieve a task by ID.
+
+    Args:
+        task_id: The unique identifier for the task.
+
+    Returns:
+        The task record as a dictionary.
+
+    Raises:
+        NotFoundError: If no task exists with the given ID.
+    """
+    if task_id not in TASKS:
+        raise NotFoundError("Task")
     return TASKS[task_id]
 
 def _validate_priority(priority: int) -> None:
