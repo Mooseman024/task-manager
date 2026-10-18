@@ -1,0 +1,17 @@
+# PA 5 Retrospective
+
+## 1. Plan Mode value
+
+The clearest save was PLAN_LOG Session 2. The original plan's PATCH route in routes/api.py read `data["priority"]` directly, so a body without `priority` would have raised KeyError and returned 500. It would also have silently ignored extra fields like `{"title": "x"}`. My amendment moved all body checks into `update_task(task_id, data)` in services/tasks.py, so a missing or unknown field returns 422. That would otherwise have needed a revert of routes/api.py and a signature change to a function that tests already depended on. Task 2 shows what happens without that review: SA-2 ran with no plan step and shipped the same bug, `data["notification_pref"]` in `set_notification_pref_route`, which returns 500 on a missing key. Session 3 was a similar catch: the plan put `int()` parsing and a ValidationError import into routes/api.py, and the amendment kept it in `list_tasks` in services/tasks.py.
+
+## 2. Plan Mode limits
+
+In Session 3, the approved plan said the no-filter test would check that `list_tasks()` returns "all currently known tasks". The `test_list_tasks_no_filter` Claude actually wrote only checks that one newly created task's id is in the result. Claude's own summary still said it "covered no-filter", and pytest -q reported 23 passed, so nothing flagged the gap. I only found it by comparing the test body with the plan text. Plan Mode verifies intent, not execution: an approved plan says what a test will check, but only reading the diff shows whether the assertion is as strong as promised. Session 4 showed a related limit: the plan predicted that a bodyless PATCH would return 400, but Flask actually returns 415. The test passed anyway, because it only asserted 4xx.
+
+## 3. Subagent value
+
+The most important boundary was SA-2's: "Only modify routes/api.py" and "Do not read or write USERS directly". The single-session evidence from Task 1 shows why. In Session 3, with nothing stopping it, Claude's first plan put parsing and validation into routes/api.py, and only the amendment pulled it back. In Task 2, `git diff --stat` showed SA-2 touched only routes/api.py, and a case-sensitive search for `USERS|ValidationError` came back empty, so the layer split held without any per-plan review. In a single session, Claude would have had USERS, the routes, and the tests in one context, and the easiest path would have been to reach into the dict from the route. The boundary had a cost, though: SA-3 could only test what its prompt listed. Because I never wrote "missing field → 422" into SA-2's hand-off, the KeyError 500 in `set_notification_pref_route` got through all three subagents with a green suite (42 passed).
+
+## 4. Gap analysis
+
+The rule I most want enforced mechanically is each subagent's "Only modify X" constraint from DECOMPOSITION.md (for example, SA-3's "Only create tests/test_users.py"). Today it holds only because I checked `git diff --stat` after the fact. A PreToolUse hook on `Edit|Write|MultiEdit` would read the active subagent's allowed paths from a file such as `.claude/current_subagent.json` and exit with code 2, blocking the call and sending the reason back to Claude, whenever the tool's `file_path` is not on that list. A matching PostToolUse hook could then run `pytest -q` after every allowed edit, so a red state shows up at the edit that caused it instead of at the end of the session.
