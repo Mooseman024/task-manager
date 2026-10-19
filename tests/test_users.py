@@ -1,7 +1,7 @@
 import copy
 import pytest
 from app import app
-from services.users import USERS, list_users, get_notification_pref, set_notification_pref
+from services.users import USERS, list_users, get_notification_pref, set_notification_pref, get_user, create_user
 from utils.errors import NotFoundError, ValidationError
 
 @pytest.fixture(autouse=True)
@@ -46,6 +46,30 @@ def test_set_notification_pref_invalid_value():
 def test_set_notification_pref_unknown_user():
     with pytest.raises(NotFoundError):
         set_notification_pref(999, "email")
+
+def test_get_user_valid():
+    user = get_user(1)
+    assert user["id"] == 1
+    assert user["name"] == "Alice"
+
+def test_get_user_unknown_user():
+    with pytest.raises(NotFoundError):
+        get_user(999)
+
+def test_create_user_valid():
+    user = create_user("Carol", "carol@example.com")
+    assert user["name"] == "Carol"
+    assert user["email"] == "carol@example.com"
+    assert user["notification_pref"] is None
+    assert get_user(user["id"]) == user
+
+def test_create_user_empty_name():
+    with pytest.raises(ValidationError):
+        create_user("", "carol@example.com")
+
+def test_create_user_invalid_email():
+    with pytest.raises(ValidationError):
+        create_user("Carol", "not-an-email")
 
 def test_list_users_includes_notification_pref():
     result = list_users()
