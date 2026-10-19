@@ -32,9 +32,14 @@ Create or update exactly these files:
 - Do not change any existing route, service function, or test. Only add.
 - Do not touch utils/errors.py or app.py.
 - If `$2` is not GET, POST, PUT, PATCH, or DELETE, or `$1` is missing, stop and ask.
+- The service function must first check that the body is a dict and raise
+  ValidationError("body", "must be a JSON object") otherwise, so a missing or null JSON body
+  returns 422, never a 500. Do not copy update_task's `for field in data` loop without this check.
 
 ## Verification
 - tests/test_$1.py must call the route through the test client and assert the happy-path
-  status: POST -> 201, GET/PUT/PATCH -> 200, DELETE -> 204.
+  status: POST -> 201, GET/PUT/PATCH -> 200, DELETE -> 204. For body-carrying methods, also
+  assert 422 for a missing required field and 422 for a null JSON body
+  (`data="null", content_type="application/json"`).
 - Run pytest -q. The new test and all existing tests must pass.
 - Report the files created/changed and the final pytest -q line.

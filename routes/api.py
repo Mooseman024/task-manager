@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from services.tasks import get_task, create_task, process_order, update_task, list_tasks
 from services.users import get_user, list_users, get_notification_pref, set_notification_pref
+from services.tags import create_tag
 from utils.errors import AppError
 
 api = Blueprint("api", __name__)
@@ -44,3 +45,8 @@ def set_notification_pref_route(user_id):
     data = request.get_json()
     set_notification_pref(user_id, data["notification_pref"])
     return jsonify({"user_id": user_id, "notification_pref": get_notification_pref(user_id)})
+
+@api.route("/tags", methods=["POST"])
+def create_tag_route():
+    data = request.get_json()
+    return jsonify(create_tag(data)), 201
