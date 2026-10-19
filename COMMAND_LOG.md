@@ -1,8 +1,14 @@
 # COMMAND_LOG.md
 
+Claude Code v2.1.302 (Sonnet 5, auto mode) on Windows. Project commands load as skills
+(`Skill(/audit-errors)`), so they are invoked as `/<name>`; the handout's `/project:` prefix is
+not used in this version. Earlier command versions are kept in `docs/command_versions/`.
+
 | # | Command invoked | $ARGUMENTS used | Stayed in scope? | What worked / what I changed |
 |---|-----------------|-----------------|------------------|------------------------------|
-| 1 | `/project:audit-errors` | `services/tasks.py` | TODO | TODO (targets: process_order raises ValueError, get_task lets KeyError escape) |
-| 1b | `/project:audit-errors` | `services/users.py` | TODO | TODO (idempotency check, expected "No changes needed") |
-| 2 | `/project:scaffold-endpoint` | `tags POST` | TODO | TODO |
-| 3 | `/project:fill-tests` | `services/users.py` | TODO | TODO (create_user and get_user's 404 path have no direct tests) |
+| 1 | `/audit-errors` | `services/tasks.py` | Yes | Correct fix: process_order's ValueError and get_task's bare `TASKS[task_id]` KeyError now raise NotFoundError("Task") after a membership check, matching get_user, with Google-style docstrings; compliant functions untouched. But Claude edited both functions in one Update call and ran pytest -q once, violating "after every function". Changed **Verification**: one function per edit, pytest between edits (v1 kept as `docs/command_versions/audit-errors_v1.md`). |
+| 1v2 | `/audit-errors` | `services/tasks.py` | Yes | After the Verification change, Claude edited process_order, ran pytest ("pytest passes. Now fixing get_task."), then edited get_task and ran pytest again. Same final code; table marked _validate_priority, list_tasks, create_task, update_task "skipped: already compliant". 114 passed. |
+| 1b | `/audit-errors` | `services/users.py` | Yes | Idempotency check passed: Claude checked get_user, create_user, list_users, get_notification_pref, set_notification_pref, replied "No changes needed" with every row "skipped: already compliant", and made no edits (git status clean). No change to the command. |
+| 2 | `/scaffold-endpoint` | `tags POST` | Yes | Route stayed thin (`request.get_json()` + one `create_tag(data)` call, 201) and avoided copying create_task_route's `data["title"]`; created services/tags.py, schemas/tags.py (+ `__init__.py`), tests/test_tags.py; 115 passed. But the service copied update_task's `for field in data` loop, so a null JSON body raises TypeError and returns 500, and the happy-path-only test missed it. Changed **Constraints** (body must be a dict, else ValidationError -> 422) and **Verification** (add 422 tests for missing field and null body); v1 kept as `docs/command_versions/scaffold-endpoint_v1.md`. |
+| 2v2 | `/scaffold-endpoint` | `tags POST` | Yes | After the change, create_tag starts with `if not isinstance(data, dict): raise ValidationError("body", "must be a JSON object")` and tests/test_tags.py has 201, missing-field 422, and null-body 422 tests; 117 passed. Side effect: v2 dropped v1's unknown-field and empty-name checks, which the command never required, so a v3 would list the required validations explicitly. |
+| 3 | `/fill-tests` | `services/users.py` | Yes | Found the two functions with no direct tests (get_user, create_user) and added 5 tests to tests/test_users.py only: get_user valid and unknown (NotFoundError), create_user valid, empty name and invalid email (ValidationError). The only removed line was the import, extended with get_user and create_user; no existing test changed. 122 passed. No change to the command needed. |

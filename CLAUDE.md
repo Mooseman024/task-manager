@@ -10,12 +10,12 @@ Python Flask API for managing tasks and users. Data is held in in-memory dicts (
 - After changing services/users.py or routes/api.py user routes: pytest -q tests/test_users.py
   (a full pytest -q stays green if no user tests exist yet, as it did after Task 2 SA-1 and SA-2)
 - After changing the hook: pytest -q tests/test_guard_writes.py
-- /project:audit-errors <services/file.py>: replace raw exceptions in one service file with
+- /audit-errors <services/file.py>: replace raw exceptions in one service file with
   existing AppError subclasses; skips compliant functions and runs pytest after each change.
-- /project:scaffold-endpoint <resource> <METHOD>: add a route in routes/api.py, a service in
+- /scaffold-endpoint <resource> <METHOD>: add a route in routes/api.py, a service in
   services/<resource>.py, a schema in schemas/<resource>.py, and a happy-path test; no logic in
   the route.
-- /project:fill-tests <services/file.py>: add happy-path and error-path tests for untested
+- /fill-tests <services/file.py>: add happy-path and error-path tests for untested
   functions in one service file; only edits the matching file in tests/.
 
 ## Hooks
